@@ -25,6 +25,7 @@ function yaml_ccp {
 }
 
 function ccp-generate {
+  echo $1 $2 $3 $4 $5 $6
   echo "$(json_ccp $2 $3 $4 $5 $6)" > organizations/peerOrganizations/${1}.example.com/connection-${1}.json
   echo "$(yaml_ccp $2 $3 $4 $5 $6)" > organizations/peerOrganizations/${1}.example.com/connection-${1}.yaml
 }
