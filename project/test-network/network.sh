@@ -187,6 +187,7 @@ function createOrgs() {
     ${CONTAINER_CLI_COMPOSE} -f compose/$COMPOSE_FILE_CA -f compose/$CONTAINER_CLI/${CONTAINER_CLI}-$COMPOSE_FILE_CA up -d 2>&1
 
     . organizations/fabric-ca/registerEnroll.sh
+    . organizations/fabric-ca/registerEnrollParametrized.sh
 
     while :
     do
@@ -199,11 +200,18 @@ function createOrgs() {
 
     infoln "Creating Org1 Identities"
 
-    createOrg1
+    #createOrg1
+    createOrg org1 7054
 
     infoln "Creating Org2 Identities"
 
-    createOrg2
+    #createOrg2
+    createOrg org2 8054
+
+    # infoln "Creating Org2 Identities"
+
+    # #createOrg2
+    # createOrg org3 10054
 
     infoln "Creating Orderer Org Identities"
 
@@ -211,8 +219,30 @@ function createOrgs() {
 
   fi
 
-  infoln "Generating CCP files for Org1 and Org2"
-  ./organizations/ccp-generate.sh
+  #infoln "Generating CCP files for Org1 and Org2"
+  #./organizations/ccp-generate.sh
+  . organizations/ccp-generate-parametrized.sh
+
+
+  infoln "Generating CCP files for Org1"
+  PEERPEM=organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
+  CAPEM=organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem
+
+  ccp-generate org1 1 7051 7054 PEERPEM CAPEM
+
+
+  infoln "Generating CCP files for Org2"
+  PEERPEM=organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
+  CAPEM=organizations/peerOrganizations/org2.example.com/ca/ca.org2.example.com-cert.pem
+
+  ccp-generate org2 2 9051 8054 PEERPEM CAPEM
+
+
+  # infoln "Generating CCP files for Org3"
+  # PEERPEM=organizations/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem
+  # CAPEM=organizations/peerOrganizations/org3.example.com/ca/ca.org3.example.com-cert.pem
+
+  # ccp-generate org3 3 11051 10054 PEERPEM CAPEM
 }
 
 # Once you create the organization crypto material, you need to create the
