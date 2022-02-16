@@ -208,7 +208,7 @@ function createOrgs() {
     #createOrg2
     createOrg org2 8054 1
 
-    infoln "Creating Org2 Identities"
+    infoln "Creating Org3 Identities"
 
     # #createOrg2
     createOrg org3 10054 1
