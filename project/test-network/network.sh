@@ -201,7 +201,7 @@ function createOrgs() {
     infoln "Creating Org1 Identities"
 
     #createOrg1
-    createOrg org1 7054 1
+    createOrg org1 7054 2
 
     infoln "Creating Org2 Identities"
 
@@ -347,7 +347,7 @@ function networkDown() {
   # Don't remove the generated artifacts -- note, the ledgers are always removed
   if [ "$MODE" != "restart" ]; then
     # Bring down the network, deleting the volumes
-    ${CONTAINER_CLI} volume rm docker_orderer.example.com docker_peer0.org1.example.com docker_peer0.org2.example.com docker_peer0.org3.example.com
+    ${CONTAINER_CLI} volume rm docker_orderer.example.com docker_peer0.org1.example.com docker_peer1.org1.example.com docker_peer0.org2.example.com docker_peer0.org3.example.com
     #Cleanup the chaincode containers
     clearContainers
     #Cleanup images
