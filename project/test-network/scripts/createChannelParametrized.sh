@@ -97,12 +97,37 @@ createChannel
 successln "Channel '$CHANNEL_NAME' created"
 
 ## Join all the peers to the channel
-infoln "Joining org1 peer to the channel..."
-joinChannel 1 7051 0
-infoln "Joining org2 peer to the channel..."
-joinChannel 2 9051 0
-infoln "Joining org3 peer to the channel..."
-joinChannel 3 11051 0
+num_peers=3
+cnt=0
+current_port=7051
+infoln "Joining org1 peers to the channel..."
+while [ $cnt -lt $num_peers ]
+do
+  infoln "Joining org1 peer${cnt} at port ${current_port} to the channel..."
+  joinChannel 1 $current_port $cnt
+  current_port=$(($current_port + 100))
+  cnt=$(($cnt + 1))
+done
+
+cnt=0
+current_port=9051
+infoln "Joining org2 peers to the channel..."
+while [ $cnt -lt $num_peers ]
+do
+  joinChannel 2 $current_port $cnt
+  current_port=$(($current_port + 100))
+  cnt=$(($cnt + 1))
+done
+
+cnt=0
+current_port=11051
+infoln "Joining org3 peers to the channel..."
+while [ $cnt -lt $num_peers ]
+do
+  joinChannel 3 $current_port $cnt
+  current_port=$(($current_port + 100))
+  cnt=$(($cnt + 1))
+done
 
 ## Set the anchor peers for each org in the channel
 infoln "Setting anchor peer for org1..."
