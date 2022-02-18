@@ -187,6 +187,7 @@ function createOrgs() {
     ${CONTAINER_CLI_COMPOSE} -f compose/$COMPOSE_FILE_CA -f compose/$CONTAINER_CLI/${CONTAINER_CLI}-$COMPOSE_FILE_CA up -d 2>&1
 
     . organizations/fabric-ca/registerEnroll.sh
+    . organizations/fabric-ca/registerEnrollParametrized.sh
 
     while :
     do
@@ -199,11 +200,18 @@ function createOrgs() {
 
     infoln "Creating Org1 Identities"
 
-    createOrg1
+    #createOrg1
+    createOrg org1 7054 3
 
     infoln "Creating Org2 Identities"
 
-    createOrg2
+    #createOrg2
+    createOrg org2 8054 3
+
+    infoln "Creating Org3 Identities"
+
+    # #createOrg2
+    createOrg org3 10054 3
 
     infoln "Creating Orderer Org Identities"
 
@@ -211,8 +219,30 @@ function createOrgs() {
 
   fi
 
-  infoln "Generating CCP files for Org1 and Org2"
-  ./organizations/ccp-generate.sh
+  #infoln "Generating CCP files for Org1 and Org2"
+  #./organizations/ccp-generate.sh
+  . organizations/ccp-generate-parametrized.sh
+
+
+  infoln "Generating CCP files for Org1"
+  PEERPEM=organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
+  CAPEM=organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem
+
+  ccp-generate org1 1 7051 7054 $PEERPEM $CAPEM
+
+
+  infoln "Generating CCP files for Org2"
+  PEERPEM=organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
+  CAPEM=organizations/peerOrganizations/org2.example.com/ca/ca.org2.example.com-cert.pem
+
+  ccp-generate org2 2 9051 8054 $PEERPEM $CAPEM
+
+
+  infoln "Generating CCP files for Org3"
+  PEERPEM=organizations/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem
+  CAPEM=organizations/peerOrganizations/org3.example.com/ca/ca.org3.example.com-cert.pem
+
+  ccp-generate org3 3 11051 10054 $PEERPEM $CAPEM
 }
 
 # Once you create the organization crypto material, you need to create the
@@ -317,7 +347,7 @@ function networkDown() {
   # Don't remove the generated artifacts -- note, the ledgers are always removed
   if [ "$MODE" != "restart" ]; then
     # Bring down the network, deleting the volumes
-    ${CONTAINER_CLI} volume rm docker_orderer.example.com docker_peer0.org1.example.com docker_peer0.org2.example.com
+    ${CONTAINER_CLI} volume rm docker_orderer.example.com docker_peer0.org1.example.com docker_peer1.org1.example.com docker_peer2.org1.example.com docker_peer0.org2.example.com docker_peer1.org2.example.com docker_peer2.org2.example.com docker_peer0.org3.example.com docker_peer1.org3.example.com docker_peer2.org3.example.com
     #Cleanup the chaincode containers
     clearContainers
     #Cleanup images
@@ -329,6 +359,7 @@ function networkDown() {
     ## remove fabric ca artifacts
     ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf organizations/fabric-ca/org1/msp organizations/fabric-ca/org1/tls-cert.pem organizations/fabric-ca/org1/ca-cert.pem organizations/fabric-ca/org1/IssuerPublicKey organizations/fabric-ca/org1/IssuerRevocationPublicKey organizations/fabric-ca/org1/fabric-ca-server.db'
     ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf organizations/fabric-ca/org2/msp organizations/fabric-ca/org2/tls-cert.pem organizations/fabric-ca/org2/ca-cert.pem organizations/fabric-ca/org2/IssuerPublicKey organizations/fabric-ca/org2/IssuerRevocationPublicKey organizations/fabric-ca/org2/fabric-ca-server.db'
+    ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf organizations/fabric-ca/org3/msp organizations/fabric-ca/org3/tls-cert.pem organizations/fabric-ca/org3/ca-cert.pem organizations/fabric-ca/org3/IssuerPublicKey organizations/fabric-ca/org3/IssuerRevocationPublicKey organizations/fabric-ca/org3/fabric-ca-server.db'
     ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf organizations/fabric-ca/ordererOrg/msp organizations/fabric-ca/ordererOrg/tls-cert.pem organizations/fabric-ca/ordererOrg/ca-cert.pem organizations/fabric-ca/ordererOrg/IssuerPublicKey organizations/fabric-ca/ordererOrg/IssuerRevocationPublicKey organizations/fabric-ca/ordererOrg/fabric-ca-server.db'
     ${CONTAINER_CLI} run --rm -v "$(pwd):/data" busybox sh -c 'cd /data && rm -rf addOrg3/fabric-ca/org3/msp addOrg3/fabric-ca/org3/tls-cert.pem addOrg3/fabric-ca/org3/ca-cert.pem addOrg3/fabric-ca/org3/IssuerPublicKey addOrg3/fabric-ca/org3/IssuerRevocationPublicKey addOrg3/fabric-ca/org3/fabric-ca-server.db'
     # remove channel and script artifacts
