@@ -134,5 +134,7 @@ infoln "Setting anchor peer for org1..."
 setAnchorPeer 1
 infoln "Setting anchor peer for org2..."
 setAnchorPeer 2
+infoln "Setting anchor peer for org3..."
+setAnchorPeer 3
 
 successln "Channel '$CHANNEL_NAME' joined"
