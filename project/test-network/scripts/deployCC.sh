@@ -109,7 +109,9 @@ fi
 
 # import utils
 . scripts/envVar.sh
+. scripts/envVarParametrized.sh
 . scripts/ccutils.sh
+. scripts/ccutilsParametrized.sh
 
 packageChaincode() {
   set -x
@@ -124,11 +126,52 @@ packageChaincode() {
 ## package the chaincode
 packageChaincode
 
-## Install chaincode on peer0.org1 and peer0.org2
-infoln "Installing chaincode on peer0.org1..."
-installChaincode 1
-infoln "Install chaincode on peer0.org2..."
-installChaincode 2
+# ## Install chaincode on peer0.org1 and peer0.org2
+# infoln "Installing chaincode on peer0.org1..."
+# #installChaincode 1
+# installChaincodeForPeer 1 7051 0
+
+# infoln "Installing chaincode on peer0.org2..."
+# #installChaincode 2
+# installChaincodeForPeer 2 9051 0
+
+# infoln "Installing chaincode on peer0.org3..."
+# #installChaincode 3
+# installChaincodeForPeer 3 11051 0
+
+num_peers=3
+cnt=0
+current_port=7051
+infoln "Installing chaincode on org1 peers..."
+while [ $cnt -lt $num_peers ]
+do
+  infoln "Installing chaincode on peer${cnt}.org1 at port ${current_port}..."
+  installChaincodeForPeer 1 $current_port $cnt
+  current_port=$(($current_port + 100))
+  cnt=$(($cnt + 1))
+done
+
+cnt=0
+current_port=9051
+infoln "Installing chaincode on org2 peers..."
+while [ $cnt -lt $num_peers ]
+do
+  infoln "Installing chaincode on peer${cnt}.org2 at port ${current_port}..."
+  installChaincodeForPeer 2 $current_port $cnt
+  current_port=$(($current_port + 100))
+  cnt=$(($cnt + 1))
+done
+
+cnt=0
+current_port=11051
+infoln "Installing chaincode on org3 peers..."
+while [ $cnt -lt $num_peers ]
+do
+  infoln "Installing chaincode on peer${cnt}.org3 at port ${current_port}..."
+  installChaincodeForPeer 3 $current_port $cnt
+  current_port=$(($current_port + 100))
+  cnt=$(($cnt + 1))
+done
 
 ## query whether the chaincode is installed
 queryInstalled 1

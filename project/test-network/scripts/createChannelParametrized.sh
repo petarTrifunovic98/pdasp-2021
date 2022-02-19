@@ -114,6 +114,7 @@ current_port=9051
 infoln "Joining org2 peers to the channel..."
 while [ $cnt -lt $num_peers ]
 do
+  infoln "Joining org2 peer${cnt} at port ${current_port} to the channel..."
   joinChannel 2 $current_port $cnt
   current_port=$(($current_port + 100))
   cnt=$(($cnt + 1))
@@ -124,6 +125,7 @@ current_port=11051
 infoln "Joining org3 peers to the channel..."
 while [ $cnt -lt $num_peers ]
 do
+  infoln "Joining org3 peer${cnt} at port ${current_port} to the channel..."
   joinChannel 3 $current_port $cnt
   current_port=$(($current_port + 100))
   cnt=$(($cnt + 1))
