@@ -49,7 +49,7 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 			{Description: "Cracked windscreen", RepairPrice: 100},
 			{Description: "Loose back wiper", RepairPrice: 5},
 		}},
-		{ID: "car4", Brand: "Zastava", Model: "Yugo 45", Color: "yellow", OwnerID: "person1", MalfunctionList: []CarMalfunction{
+		{ID: "car4", Brand: "Zastava", Model: "Yugo 45", Year: 1985, Color: "yellow", OwnerID: "person1", MalfunctionList: []CarMalfunction{
 			{Description: "Broken alternator", RepairPrice: 80},
 			{Description: "Broken spark plug", RepairPrice: 70},
 			{Description: "Loose exhaust pipe", RepairPrice: 10},
