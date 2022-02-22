@@ -245,7 +245,7 @@ func (s *SmartContract) RepairCar(ctx contractapi.TransactionContextInterface, i
 		return err
 	}
 
-	err = ctx.GetStub().PutState(id, personAssetJSON)
+	err = ctx.GetStub().PutState(personAsset.ID, personAssetJSON)
 	if err != nil {
 		return err
 	}
