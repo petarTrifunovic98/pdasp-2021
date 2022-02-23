@@ -177,6 +177,48 @@ func (s *SmartContract) GetCarsByColor(ctx contractapi.TransactionContextInterfa
 	return retList, nil
 }
 
+func (s *SmartContract) GetCarsByColor(ctx contractapi.TransactionContextInterface, color string, ownerID string) ([]*CarAsset, error) {
+	exists, err := s.PersonAssetExists(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("the person %v does not exist", ownerID)
+	}
+
+	coloredCarByOwnerIter, err := ctx.GetStub().GetStateByPartialCompositeKey("color~owner~ID", []string{color, ownerID})
+	if err != nil {
+		return nil, err
+	}
+
+	defer coloredCarByOwnerIter.Close()
+
+	retList := make([]*CarAsset, 0)
+
+	for i := 0; coloredCarByOwnerIter.HasNext(); i++ {
+		responseRange, err := coloredCarByOwnerIter.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		_, compositeKeyParts, err := ctx.GetStub().SplitCompositeKey(responseRange.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		retCarID := compositeKeyParts[2]
+
+		carAsset, err := s.ReadCarAsset(ctx, retCarID)
+		if err != nil {
+			return nil, err
+		}
+
+		retList = append(retList, carAsset)
+	}
+
+	return retList, nil
+}
+
 func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInterface, id string, newOwnerID string, acceptMalfunction bool) (bool, error) {
 	carAsset, err := s.ReadCarAsset(ctx, id)
 	if err != nil {
@@ -196,10 +238,8 @@ func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInter
 	carPrice := float32(0)
 
 	if carAsset.MalfunctionList == nil || len(carAsset.MalfunctionList) == 0 {
-		carAsset.OwnerID = newOwnerID
 		carPrice = carAsset.Price
 	} else if acceptMalfunction {
-		carAsset.OwnerID = newOwnerID
 		malfuctionPrice := float32(0)
 		for _, carMalfunction := range carAsset.MalfunctionList {
 			malfuctionPrice += carMalfunction.RepairPrice
@@ -208,6 +248,9 @@ func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInter
 	} else {
 		return false, fmt.Errorf("the buyer will not accept a malfunctioned car")
 	}
+
+	oldOwner := carAsset.OwnerID
+	carAsset.OwnerID = newOwnerID
 
 	if buyer.AmountOfMoneyOwned >= carPrice {
 		buyer.AmountOfMoneyOwned -= carPrice
@@ -240,6 +283,28 @@ func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInter
 	}
 
 	err = ctx.GetStub().PutState(seller.ID, sellerJSON)
+	if err != nil {
+		return false, err
+	}
+
+	indexName := "color~owner~ID"
+	colorNewOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{carAsset.Color, newOwnerID, carAsset.ID})
+	if err != nil {
+		return false, err
+	}
+
+	value := []byte{0x00}
+	err = ctx.GetStub().PutState(colorNewOwnerIndexKey, value)
+	if err != nil {
+		return false, err
+	}
+
+	colorOldOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{oldOwner, newOwnerID, carAsset.ID})
+	if err != nil {
+		return false, err
+	}
+
+	err = ctx.GetStub().DelState(colorOldOwnerIndexKey)
 	if err != nil {
 		return false, err
 	}
@@ -297,6 +362,28 @@ func (s *SmartContract) ChangeCarColor(ctx contractapi.TransactionContextInterfa
 	}
 
 	err = ctx.GetStub().PutState(id, carAssetJSON)
+	if err != nil {
+		return "", err
+	}
+
+	indexName := "color~owner~ID"
+	newColorOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{newColor, carAsset.OwnerID, carAsset.ID})
+	if err != nil {
+		return "", err
+	}
+
+	value := []byte{0x00}
+	err = ctx.GetStub().PutState(newColorOwnerIndexKey, value)
+	if err != nil {
+		return "", err
+	}
+
+	oldColorOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{oldColor, carAsset.OwnerID, carAsset.ID})
+	if err != nil {
+		return "", err
+	}
+
+	err = ctx.GetStub().DelState(oldColorOwnerIndexKey)
 	if err != nil {
 		return "", err
 	}
