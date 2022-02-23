@@ -249,12 +249,14 @@ func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInter
 		return false, fmt.Errorf("the buyer will not accept a malfunctioned car")
 	}
 
-	oldOwner := carAsset.OwnerID
+	oldOwnerID := carAsset.OwnerID
 	carAsset.OwnerID = newOwnerID
 
 	if buyer.AmountOfMoneyOwned >= carPrice {
 		buyer.AmountOfMoneyOwned -= carPrice
 		seller.AmountOfMoneyOwned += carPrice
+	} else {
+		return false, fmt.Errorf("the buyer does not own enough money to purchase the car")
 	}
 
 	carAssetJSON, err := json.Marshal(carAsset)
@@ -299,7 +301,7 @@ func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInter
 		return false, err
 	}
 
-	colorOldOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{oldOwner, newOwnerID, carAsset.ID})
+	colorOldOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{carAsset.Color, oldOwnerID, carAsset.ID})
 	if err != nil {
 		return false, err
 	}
