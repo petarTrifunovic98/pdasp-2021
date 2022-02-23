@@ -177,7 +177,7 @@ func (s *SmartContract) GetCarsByColor(ctx contractapi.TransactionContextInterfa
 	return retList, nil
 }
 
-func (s *SmartContract) GetCarsByColor(ctx contractapi.TransactionContextInterface, color string, ownerID string) ([]*CarAsset, error) {
+func (s *SmartContract) GetCarsByColorAndOwner(ctx contractapi.TransactionContextInterface, color string, ownerID string) ([]*CarAsset, error) {
 	exists, err := s.PersonAssetExists(ctx, ownerID)
 	if err != nil {
 		return nil, err
