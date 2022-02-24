@@ -24,6 +24,7 @@ type CarAsset struct {
 	Year            int
 	Color           string
 	OwnerID         string
+	Price           float32
 	MalfunctionList []CarMalfunction
 }
 
@@ -38,25 +39,25 @@ type PersonAsset struct {
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
 
 	carAssets := []CarAsset{
-		{ID: "car1", Brand: "Opel", Model: "Cascada", Year: 2013, Color: "blue", OwnerID: "person1", MalfunctionList: []CarMalfunction{
+		{ID: "car1", Brand: "Opel", Model: "Cascada", Year: 2013, Color: "blue", OwnerID: "person1", Price: 2500, MalfunctionList: []CarMalfunction{
 			{Description: "Shakey steering wheel", RepairPrice: 50},
 			{Description: "Oil leaking", RepairPrice: 75},
 		}},
-		{ID: "car2", Brand: "Audi", Model: "A4", Year: 2016, Color: "red", OwnerID: "person2", MalfunctionList: []CarMalfunction{
+		{ID: "car2", Brand: "Audi", Model: "A4", Year: 2016, Color: "red", OwnerID: "person2", Price: 5000, MalfunctionList: []CarMalfunction{
 			{Description: "Flat fron left tyre", RepairPrice: 15},
 		}},
-		{ID: "car3", Brand: "Volvo", Model: "V60", Year: 2014, Color: "green", OwnerID: "person1", MalfunctionList: []CarMalfunction{
+		{ID: "car3", Brand: "Volvo", Model: "V60", Year: 2014, Color: "green", OwnerID: "person1", Price: 3400, MalfunctionList: []CarMalfunction{
 			{Description: "Cracked windscreen", RepairPrice: 100},
 			{Description: "Loose back wiper", RepairPrice: 5},
 		}},
-		{ID: "car4", Brand: "Zastava", Model: "Yugo 45", Year: 1985, Color: "yellow", OwnerID: "person1", MalfunctionList: []CarMalfunction{
+		{ID: "car4", Brand: "Zastava", Model: "Yugo 45", Year: 1985, Color: "yellow", OwnerID: "person1", Price: 200, MalfunctionList: []CarMalfunction{
 			{Description: "Broken alternator", RepairPrice: 80},
 			{Description: "Broken spark plug", RepairPrice: 70},
 			{Description: "Loose exhaust pipe", RepairPrice: 10},
 			{Description: "Overheating", RepairPrice: 120},
 		}},
-		{ID: "car5", Brand: "Mercedes-Benz", Model: "A-class", Year: 2018, Color: "black", OwnerID: "person3", MalfunctionList: []CarMalfunction{}},
-		{ID: "car6", Brand: "BMW", Model: "X5", Year: 2018, Color: "white", OwnerID: "person2", MalfunctionList: []CarMalfunction{
+		{ID: "car5", Brand: "Mercedes-Benz", Model: "A-class", Year: 2018, Color: "black", OwnerID: "person3", Price: 5300, MalfunctionList: []CarMalfunction{}},
+		{ID: "car6", Brand: "BMW", Model: "X5", Year: 2018, Color: "white", OwnerID: "person2", Price: 6000, MalfunctionList: []CarMalfunction{
 			{Description: "Cracked headlight", RepairPrice: 30},
 		}},
 	}
@@ -76,6 +77,18 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 		err = ctx.GetStub().PutState(carAsset.ID, carAssetJSON)
 		if err != nil {
 			return fmt.Errorf("failed to put cars to world state. %v", err)
+		}
+
+		indexName := "color~owner~ID"
+		colorOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{carAsset.Color, carAsset.OwnerID, carAsset.ID})
+		if err != nil {
+			return err
+		}
+
+		value := []byte{0x00}
+		err = ctx.GetStub().PutState(colorOwnerIndexKey, value)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -130,34 +143,175 @@ func (s *SmartContract) ReadCarAsset(ctx contractapi.TransactionContextInterface
 	return &carAsset, nil
 }
 
-func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInterface, id string, newOwnerID string) (string, error) {
-	carAsset, err := s.ReadCarAsset(ctx, id)
+func (s *SmartContract) GetCarsByColor(ctx contractapi.TransactionContextInterface, color string) ([]*CarAsset, error) {
+	coloredCarIter, err := ctx.GetStub().GetStateByPartialCompositeKey("color~owner~ID", []string{color})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	exists, err := s.PersonAssetExists(ctx, newOwnerID)
+	defer coloredCarIter.Close()
+
+	retList := make([]*CarAsset, 0)
+
+	for i := 0; coloredCarIter.HasNext(); i++ {
+		responseRange, err := coloredCarIter.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		_, compositeKeyParts, err := ctx.GetStub().SplitCompositeKey(responseRange.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		retCarID := compositeKeyParts[2]
+
+		carAsset, err := s.ReadCarAsset(ctx, retCarID)
+		if err != nil {
+			return nil, err
+		}
+
+		retList = append(retList, carAsset)
+	}
+
+	return retList, nil
+}
+
+func (s *SmartContract) GetCarsByColorAndOwner(ctx contractapi.TransactionContextInterface, color string, ownerID string) ([]*CarAsset, error) {
+	exists, err := s.PersonAssetExists(ctx, ownerID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if !exists {
-		return "", fmt.Errorf("the person %s does not exist", newOwnerID)
+		return nil, fmt.Errorf("the person %v does not exist", ownerID)
 	}
 
-	oldOwner := carAsset.OwnerID
+	coloredCarByOwnerIter, err := ctx.GetStub().GetStateByPartialCompositeKey("color~owner~ID", []string{color, ownerID})
+	if err != nil {
+		return nil, err
+	}
+
+	defer coloredCarByOwnerIter.Close()
+
+	retList := make([]*CarAsset, 0)
+
+	for i := 0; coloredCarByOwnerIter.HasNext(); i++ {
+		responseRange, err := coloredCarByOwnerIter.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		_, compositeKeyParts, err := ctx.GetStub().SplitCompositeKey(responseRange.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		retCarID := compositeKeyParts[2]
+
+		carAsset, err := s.ReadCarAsset(ctx, retCarID)
+		if err != nil {
+			return nil, err
+		}
+
+		retList = append(retList, carAsset)
+	}
+
+	return retList, nil
+}
+
+func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInterface, id string, newOwnerID string, acceptMalfunction bool) (bool, error) {
+	carAsset, err := s.ReadCarAsset(ctx, id)
+	if err != nil {
+		return false, err
+	}
+
+	buyer, err := s.ReadPersonAsset(ctx, newOwnerID)
+	if err != nil {
+		return false, err
+	}
+
+	seller, err := s.ReadPersonAsset(ctx, carAsset.OwnerID)
+	if err != nil {
+		return false, err
+	}
+
+	carPrice := float32(0)
+
+	if carAsset.MalfunctionList == nil || len(carAsset.MalfunctionList) == 0 {
+		carPrice = carAsset.Price
+	} else if acceptMalfunction {
+		malfuctionPrice := float32(0)
+		for _, carMalfunction := range carAsset.MalfunctionList {
+			malfuctionPrice += carMalfunction.RepairPrice
+		}
+		carPrice = carAsset.Price - malfuctionPrice
+	} else {
+		return false, fmt.Errorf("the buyer will not accept a malfunctioned car")
+	}
+
+	oldOwnerID := carAsset.OwnerID
 	carAsset.OwnerID = newOwnerID
+
+	if buyer.AmountOfMoneyOwned >= carPrice {
+		buyer.AmountOfMoneyOwned -= carPrice
+		seller.AmountOfMoneyOwned += carPrice
+	} else {
+		return false, fmt.Errorf("the buyer does not own enough money to purchase the car")
+	}
 
 	carAssetJSON, err := json.Marshal(carAsset)
 	if err != nil {
-		return "", err
+		return false, err
+	}
+
+	buyerJSON, err := json.Marshal(buyer)
+	if err != nil {
+		return false, err
+	}
+
+	sellerJSON, err := json.Marshal(seller)
+	if err != nil {
+		return false, err
 	}
 
 	err = ctx.GetStub().PutState(id, carAssetJSON)
 	if err != nil {
-		return "", err
+		return false, err
 	}
 
-	return oldOwner, nil
+	err = ctx.GetStub().PutState(buyer.ID, buyerJSON)
+	if err != nil {
+		return false, err
+	}
+
+	err = ctx.GetStub().PutState(seller.ID, sellerJSON)
+	if err != nil {
+		return false, err
+	}
+
+	indexName := "color~owner~ID"
+	colorNewOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{carAsset.Color, newOwnerID, carAsset.ID})
+	if err != nil {
+		return false, err
+	}
+
+	value := []byte{0x00}
+	err = ctx.GetStub().PutState(colorNewOwnerIndexKey, value)
+	if err != nil {
+		return false, err
+	}
+
+	colorOldOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{carAsset.Color, oldOwnerID, carAsset.ID})
+	if err != nil {
+		return false, err
+	}
+
+	err = ctx.GetStub().DelState(colorOldOwnerIndexKey)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (s *SmartContract) AddCarMalfunction(ctx contractapi.TransactionContextInterface, id string, description string, repairPrice float32) error {
@@ -172,6 +326,15 @@ func (s *SmartContract) AddCarMalfunction(ctx contractapi.TransactionContextInte
 	}
 
 	carAsset.MalfunctionList = append(carAsset.MalfunctionList, newMalfunction)
+
+	totalRepairPrice := float32(0)
+	for _, carMalfunction := range carAsset.MalfunctionList {
+		totalRepairPrice += carMalfunction.RepairPrice
+	}
+
+	if totalRepairPrice > carAsset.Price {
+		return ctx.GetStub().DelState(id)
+	}
 
 	carAssetJSON, err := json.Marshal(carAsset)
 	if err != nil {
@@ -201,6 +364,28 @@ func (s *SmartContract) ChangeCarColor(ctx contractapi.TransactionContextInterfa
 	}
 
 	err = ctx.GetStub().PutState(id, carAssetJSON)
+	if err != nil {
+		return "", err
+	}
+
+	indexName := "color~owner~ID"
+	newColorOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{newColor, carAsset.OwnerID, carAsset.ID})
+	if err != nil {
+		return "", err
+	}
+
+	value := []byte{0x00}
+	err = ctx.GetStub().PutState(newColorOwnerIndexKey, value)
+	if err != nil {
+		return "", err
+	}
+
+	oldColorOwnerIndexKey, err := ctx.GetStub().CreateCompositeKey(indexName, []string{oldColor, carAsset.OwnerID, carAsset.ID})
+	if err != nil {
+		return "", err
+	}
+
+	err = ctx.GetStub().DelState(oldColorOwnerIndexKey)
 	if err != nil {
 		return "", err
 	}
