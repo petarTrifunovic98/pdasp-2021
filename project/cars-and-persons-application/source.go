@@ -8,10 +8,8 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,10 +18,8 @@ import (
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/hyperledger/fabric-gateway/pkg/identity"
-	gwproto "github.com/hyperledger/fabric-protos-go/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -70,23 +66,27 @@ func main() {
 	network := gateway.GetNetwork(channelName)
 	contract := network.GetContract(chaincodeName)
 
-	fmt.Println("initLedger:")
+	fmt.Println("Initializing ledger")
 	initLedger(contract)
 
-	fmt.Println("getAllAssets:")
-	getAllAssets(contract)
+	fmt.Println("Choose an option by entering a number:")
+	fmt.Println("1 - Read person asset")
+	fmt.Println("2 - Read car asset")
+	fmt.Println("3 - Get cars by color")
+	fmt.Println("4 - Get cars by color and owner")
+	fmt.Println("5 - Transfer car to another owner")
+	fmt.Println("6 - Add car malfunction")
+	fmt.Println("7 - Change car color")
+	fmt.Println("8 - Repair car")
 
-	fmt.Println("createAsset:")
-	createAsset(contract)
+	var option int
+	fmt.Scanf("%d", &option)
 
-	fmt.Println("readAssetByID:")
-	readAssetByID(contract)
-
-	fmt.Println("transferAssetAsync:")
-	transferAssetAsync(contract)
-
-	fmt.Println("exampleErrorHandling:")
-	exampleErrorHandling(contract)
+	switch option {
+	case 1:
+		fmt.Printf("Enter person ID")
+		var personID string
+	}
 
 	log.Println("============ application-golang ends ============")
 }
@@ -173,6 +173,30 @@ func initLedger(contract *client.Contract) {
 	fmt.Printf("*** Transaction committed successfully\n")
 }
 
+func readPersonAsset(contract *client.Contract, id string) {
+	fmt.Printf("Evaluate Transaction: ReadPersonAsset, function returns person asset attributes\n")
+
+	evaluateResult, err := contract.EvaluateTransaction("ReadPersonAsset", id)
+	if err != nil {
+		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
+	}
+	result := formatJSON(evaluateResult)
+
+	fmt.Printf("*** Result:%s\n", result)
+}
+
+func readCarAsset(contract *client.Contract, id string) {
+	fmt.Printf("Evaluate Transaction: ReadCarAsset, function returns car asset attributes\n")
+
+	evaluateResult, err := contract.EvaluateTransaction("ReadCarAsset", id)
+	if err != nil {
+		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
+	}
+	result := formatJSON(evaluateResult)
+
+	fmt.Printf("*** Result:%s\n", result)
+}
+
 func getCarsByColor(contract *client.Contract, color string) {
 	fmt.Println("Evaluate Transaction: GetCarsByColor, function returns all the cars with the given color")
 
@@ -239,100 +263,6 @@ func repairCar(contract *client.Contract, id string) {
 	}
 
 	fmt.Printf("*** Transaction committed successfully\n")
-}
-
-// Evaluate a transaction to query ledger state.
-func getAllAssets(contract *client.Contract) {
-	fmt.Println("Evaluate Transaction: GetAllAssets, function returns all the current assets on the ledger")
-
-	evaluateResult, err := contract.EvaluateTransaction("GetAllAssets")
-	if err != nil {
-		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
-	}
-	result := formatJSON(evaluateResult)
-
-	fmt.Printf("*** Result:%s\n", result)
-}
-
-// Submit a transaction synchronously, blocking until it has been committed to the ledger.
-func createAsset(contract *client.Contract) {
-	fmt.Printf("Submit Transaction: CreateAsset, creates new asset with ID, Color, Size, Owner and AppraisedValue arguments \n")
-
-	_, err := contract.SubmitTransaction("CreateAsset", assetId, "yellow", "5", "Tom", "1300")
-	if err != nil {
-		panic(fmt.Errorf("failed to submit transaction: %w", err))
-	}
-
-	fmt.Printf("*** Transaction committed successfully\n")
-}
-
-// Evaluate a transaction by assetID to query ledger state.
-func readAssetByID(contract *client.Contract) {
-	fmt.Printf("Evaluate Transaction: ReadAsset, function returns asset attributes\n")
-
-	evaluateResult, err := contract.EvaluateTransaction("ReadAsset", assetId)
-	if err != nil {
-		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
-	}
-	result := formatJSON(evaluateResult)
-
-	fmt.Printf("*** Result:%s\n", result)
-}
-
-/*
-Submit transaction asynchronously, blocking until the transaction has been sent to the orderer, and allowing
-this thread to process the chaincode response (e.g. update a UI) without waiting for the commit notification
-*/
-func transferAssetAsync(contract *client.Contract) {
-	fmt.Printf("Async Submit Transaction: TransferAsset, updates existing asset owner'\n")
-
-	submitResult, commit, err := contract.SubmitAsync("TransferAsset", client.WithArguments(assetId, "Mark"))
-	if err != nil {
-		panic(fmt.Errorf("failed to submit transaction asynchronously: %w", err))
-	}
-
-	fmt.Printf("Successfully submitted transaction to transfer ownership from %s to Mark. \n", string(submitResult))
-	fmt.Println("Waiting for transaction commit.")
-
-	if status, err := commit.Status(); err != nil {
-		panic(fmt.Errorf("failed to get commit status: %w", err))
-	} else if !status.Successful {
-		panic(fmt.Errorf("transaction %s failed to commit with status: %d", status.TransactionID, int32(status.Code)))
-	}
-
-	fmt.Printf("*** Transaction committed successfully\n")
-}
-
-// Submit transaction, passing in the wrong number of arguments ,expected to throw an error containing details of any error responses from the smart contract.
-func exampleErrorHandling(contract *client.Contract) {
-	fmt.Println("Submit Transaction: UpdateAsset asset70, asset70 does not exist and should return an error")
-
-	_, err := contract.SubmitTransaction("UpdateAsset")
-	if err != nil {
-		switch err := err.(type) {
-		case *client.EndorseError:
-			fmt.Printf("Endorse error with gRPC status %v: %s\n", status.Code(err), err)
-		case *client.SubmitError:
-			fmt.Printf("Submit error with gRPC status %v: %s\n", status.Code(err), err)
-		case *client.CommitStatusError:
-			if errors.Is(err, context.DeadlineExceeded) {
-				fmt.Printf("Timeout waiting for transaction %s commit status: %s", err.TransactionID, err)
-			} else {
-				fmt.Printf("Error obtaining commit status with gRPC status %v: %s\n", status.Code(err), err)
-			}
-		case *client.CommitError:
-			fmt.Printf("Transaction %s failed to commit with status %d: %s\n", err.TransactionID, int32(err.Code), err)
-		}
-		/*
-		 Any error that originates from a peer or orderer node external to the gateway will have its details
-		 embedded within the gRPC status error. The following code shows how to extract that.
-		*/
-		statusErr := status.Convert(err)
-		for _, detail := range statusErr.Details() {
-			errDetail := detail.(*gwproto.ErrorDetail)
-			fmt.Printf("Error from endpoint: %s, mspId: %s, message: %s\n", errDetail.Address, errDetail.MspId, errDetail.Message)
-		}
-	}
 }
 
 //Format JSON data
