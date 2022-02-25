@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/hyperledger/fabric-gateway/pkg/client"
@@ -24,7 +25,7 @@ import (
 
 const (
 	mspID         = "Org1MSP"
-	cryptoPath    = "../../test-network/organizations/peerOrganizations/org1.example.com"
+	cryptoPath    = "../test-network/organizations/peerOrganizations/org1.example.com"
 	certPath      = cryptoPath + "/users/User1@org1.example.com/msp/signcerts/cert.pem"
 	keyPath       = cryptoPath + "/users/User1@org1.example.com/msp/keystore/"
 	tlsCertPath   = cryptoPath + "/peers/peer0.org1.example.com/tls/ca.crt"
@@ -67,25 +68,119 @@ func main() {
 	contract := network.GetContract(chaincodeName)
 
 	fmt.Println("Initializing ledger")
-	initLedger(contract)
-
-	fmt.Println("Choose an option by entering a number:")
-	fmt.Println("1 - Read person asset")
-	fmt.Println("2 - Read car asset")
-	fmt.Println("3 - Get cars by color")
-	fmt.Println("4 - Get cars by color and owner")
-	fmt.Println("5 - Transfer car to another owner")
-	fmt.Println("6 - Add car malfunction")
-	fmt.Println("7 - Change car color")
-	fmt.Println("8 - Repair car")
+	//initLedger(contract)
 
 	var option int
-	fmt.Scanf("%d", &option)
 
-	switch option {
-	case 1:
-		fmt.Printf("Enter person ID")
-		var personID string
+loop:
+	for {
+		fmt.Println("Choose an option by entering a number:")
+		fmt.Println("0 - Initialize ledger")
+		fmt.Println("1 - Read person asset")
+		fmt.Println("2 - Read car asset")
+		fmt.Println("3 - Get cars by color")
+		fmt.Println("4 - Get cars by color and owner")
+		fmt.Println("5 - Transfer car to another owner")
+		fmt.Println("6 - Add car malfunction")
+		fmt.Println("7 - Change car color")
+		fmt.Println("8 - Repair car")
+		fmt.Println("9 - Exit")
+
+		fmt.Scanf("%d", &option)
+
+		switch option {
+		case 0:
+			fmt.Println("Initializing ledger...")
+			initLedger(contract)
+
+		case 1:
+			fmt.Printf("Enter person ID: ")
+			var personID string
+			fmt.Scanf("%s", &personID)
+			readPersonAsset(contract, personID)
+
+		case 2:
+			fmt.Printf("Enter car ID: ")
+			var carID string
+			fmt.Scanf("%s", &carID)
+			readCarAsset(contract, carID)
+
+		case 3:
+			fmt.Printf("Enter car color: ")
+			var color string
+			fmt.Scanf("%s", &color)
+			getCarsByColor(contract, color)
+
+		case 4:
+			fmt.Printf("Enter car color: ")
+			var color string
+			fmt.Scanf("%s", &color)
+
+			fmt.Printf("Enter car owner: ")
+			var ownerID string
+			fmt.Scanf("%s", &ownerID)
+			getCarsByColorAndOwner(contract, color, ownerID)
+
+		case 5:
+			fmt.Printf("Enter car ID: ")
+			var carID string
+			fmt.Scanf("%s", &carID)
+
+			fmt.Printf("Enter new owner ID: ")
+			var newOwnerID string
+			fmt.Scanf("%s", &newOwnerID)
+
+			fmt.Printf("Does the owner accept malfunctioned car, with a price compensation? (Y/n): ")
+			var acceptMalfunctionedStr string
+			fmt.Scanf("%s", &acceptMalfunctionedStr)
+			var acceptMalfunctionedBool bool
+			if acceptMalfunctionedStr == "no" {
+				acceptMalfunctionedBool = false
+			} else {
+				acceptMalfunctionedBool = true
+			}
+
+			transferCarAsset(contract, carID, newOwnerID, acceptMalfunctionedBool)
+
+		case 6:
+			fmt.Printf("Enter car ID: ")
+			var carID string
+			fmt.Scanf("%s", &carID)
+
+			fmt.Println("Enter malfunction description:")
+			var description string
+			fmt.Scanf("%s", &description)
+
+			fmt.Printf("Enter malfunction repair price: ")
+			var repairPrice float32
+			fmt.Scanf("%f", &repairPrice)
+			addCarMalfunction(contract, carID, description, repairPrice)
+
+		case 7:
+			fmt.Printf("Enter car ID: ")
+			var carID string
+			fmt.Scanf("%s", carID)
+
+			fmt.Printf("Enter new car color: ")
+			var newColor string
+			fmt.Scanf("%s", &newColor)
+			changeCarColor(contract, carID, newColor)
+
+		case 8:
+			fmt.Printf("Enter car ID: ")
+			var carID string
+			fmt.Scanf("%s", carID)
+			repairCar(contract, carID)
+
+		case 9:
+			fmt.Printf("Exiting...")
+			break loop
+
+		default:
+			fmt.Printf("Invalid input! Please enter a number in the range [1, 9]!")
+		}
+
+		fmt.Printf("\n\n")
 	}
 
 	log.Println("============ application-golang ends ============")
@@ -224,7 +319,7 @@ func getCarsByColorAndOwner(contract *client.Contract, color string, ownerID str
 func transferCarAsset(contract *client.Contract, id string, newOwner string, acceptMalfunction bool) {
 	fmt.Printf("Submit Transaction: TransferCarAsset, change car owner \n")
 
-	_, err := contract.SubmitTransaction("TransferCarAsset", id, newOwner, acceptMalfunction)
+	_, err := contract.SubmitTransaction("TransferCarAsset", id, newOwner, strconv.FormatBool(acceptMalfunction))
 	if err != nil {
 		panic(fmt.Errorf("failed to submit transaction: %w", err))
 	}
@@ -235,7 +330,7 @@ func transferCarAsset(contract *client.Contract, id string, newOwner string, acc
 func addCarMalfunction(contract *client.Contract, id string, description string, repairPrice float32) {
 	fmt.Printf("Submit Transaction: AddCarMalfunction, record a new car malfunction \n")
 
-	_, err := contract.SubmitTransaction("AddCarMalfunction", id, description, repairPrice)
+	_, err := contract.SubmitTransaction("AddCarMalfunction", id, description, fmt.Sprintf("%f", repairPrice))
 	if err != nil {
 		panic(fmt.Errorf("failed to submit transaction: %w", err))
 	}
