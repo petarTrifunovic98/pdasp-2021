@@ -357,7 +357,7 @@ func getCarsByColor(contract *client.Contract, color string) {
 }
 
 func getCarsByColorAndOwner(contract *client.Contract, color string, ownerID string) {
-	fmt.Println("Evaluate Transaction: GetCarsByColor, function returns all the cars with the given color and owner")
+	fmt.Println("Evaluate Transaction: GetCarsByColorAndOwner, function returns all the cars with the given color and owner")
 
 	evaluateResult, err := contract.EvaluateTransaction("GetCarsByColorAndOwner", color, ownerID)
 	if err != nil {
