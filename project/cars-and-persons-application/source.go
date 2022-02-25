@@ -262,7 +262,8 @@ func initLedger(contract *client.Contract) {
 
 	_, err := contract.SubmitTransaction("InitLedger")
 	if err != nil {
-		panic(fmt.Errorf("failed to submit transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to submit transaction: %w", err))
+		return
 	}
 
 	fmt.Printf("*** Transaction committed successfully\n")
@@ -273,7 +274,8 @@ func readPersonAsset(contract *client.Contract, id string) {
 
 	evaluateResult, err := contract.EvaluateTransaction("ReadPersonAsset", id)
 	if err != nil {
-		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to evaluate transaction: %w", err))
+		return
 	}
 	result := formatJSON(evaluateResult)
 
@@ -285,7 +287,8 @@ func readCarAsset(contract *client.Contract, id string) {
 
 	evaluateResult, err := contract.EvaluateTransaction("ReadCarAsset", id)
 	if err != nil {
-		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to evaluate transaction: %w", err))
+		return
 	}
 	result := formatJSON(evaluateResult)
 
@@ -297,7 +300,8 @@ func getCarsByColor(contract *client.Contract, color string) {
 
 	evaluateResult, err := contract.EvaluateTransaction("GetCarsByColor", color)
 	if err != nil {
-		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to evaluate transaction: %w", err))
+		return
 	}
 	result := formatJSON(evaluateResult)
 
@@ -309,7 +313,8 @@ func getCarsByColorAndOwner(contract *client.Contract, color string, ownerID str
 
 	evaluateResult, err := contract.EvaluateTransaction("GetCarsByColorAndOwner", color, ownerID)
 	if err != nil {
-		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to evaluate transaction: %w", err))
+		return
 	}
 	result := formatJSON(evaluateResult)
 
@@ -321,7 +326,8 @@ func transferCarAsset(contract *client.Contract, id string, newOwner string, acc
 
 	_, err := contract.SubmitTransaction("TransferCarAsset", id, newOwner, strconv.FormatBool(acceptMalfunction))
 	if err != nil {
-		panic(fmt.Errorf("failed to submit transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to submit transaction: %w", err))
+		return
 	}
 
 	fmt.Printf("*** Transaction committed successfully\n")
@@ -332,7 +338,8 @@ func addCarMalfunction(contract *client.Contract, id string, description string,
 
 	_, err := contract.SubmitTransaction("AddCarMalfunction", id, description, fmt.Sprintf("%f", repairPrice))
 	if err != nil {
-		panic(fmt.Errorf("failed to submit transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to submit transaction: %w", err))
+		return
 	}
 
 	fmt.Printf("*** Transaction committed successfully\n")
@@ -343,7 +350,8 @@ func changeCarColor(contract *client.Contract, id string, newColor string) {
 
 	_, err := contract.SubmitTransaction("ChangeCarColor", id, newColor)
 	if err != nil {
-		panic(fmt.Errorf("failed to submit transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to submit transaction: %w", err))
+		return
 	}
 
 	fmt.Printf("*** Transaction committed successfully\n")
@@ -354,7 +362,8 @@ func repairCar(contract *client.Contract, id string) {
 
 	_, err := contract.SubmitTransaction("RepairCar", id)
 	if err != nil {
-		panic(fmt.Errorf("failed to submit transaction: %w", err))
+		fmt.Println(fmt.Errorf("failed to submit transaction: %w", err))
+		return
 	}
 
 	fmt.Printf("*** Transaction committed successfully\n")
