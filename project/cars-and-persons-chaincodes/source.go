@@ -225,6 +225,10 @@ func (s *SmartContract) TransferCarAsset(ctx contractapi.TransactionContextInter
 		return false, err
 	}
 
+	if carAsset.OwnerID == newOwnerID {
+		return false, fmt.Errorf("Person %s is already the owner of the car!", newOwnerID)
+	}
+
 	buyer, err := s.ReadPersonAsset(ctx, newOwnerID)
 	if err != nil {
 		return false, err
