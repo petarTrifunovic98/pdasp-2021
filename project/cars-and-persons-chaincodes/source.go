@@ -51,10 +51,10 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 			{Description: "Loose back wiper", RepairPrice: 5},
 		}},
 		{ID: "car4", Brand: "Zastava", Model: "Yugo 45", Year: 1985, Color: "yellow", OwnerID: "person1", Price: 200, MalfunctionList: []CarMalfunction{
-			{Description: "Broken alternator", RepairPrice: 80},
-			{Description: "Broken spark plug", RepairPrice: 70},
+			{Description: "Broken alternator", RepairPrice: 50},
+			{Description: "Broken spark plug", RepairPrice: 30},
 			{Description: "Loose exhaust pipe", RepairPrice: 10},
-			{Description: "Overheating", RepairPrice: 120},
+			{Description: "Overheating", RepairPrice: 80},
 		}},
 		{ID: "car5", Brand: "Mercedes-Benz", Model: "A-class", Year: 2018, Color: "black", OwnerID: "person3", Price: 5300, MalfunctionList: []CarMalfunction{}},
 		{ID: "car6", Brand: "BMW", Model: "X5", Year: 2018, Color: "white", OwnerID: "person2", Price: 6000, MalfunctionList: []CarMalfunction{
@@ -63,9 +63,9 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 	}
 
 	personAssets := []PersonAsset{
-		{ID: "person1", FirstName: "Petar", LastName: "Trifunovic", EmailAddress: "petar@pdasp.rs", AmountOfMoneyOwned: 332.54},
-		{ID: "person2", FirstName: "Marko", LastName: "Markovic", EmailAddress: "marko@pdasp.rs", AmountOfMoneyOwned: 567.4},
-		{ID: "person3", FirstName: "Jovana", LastName: "Jovanovic", EmailAddress: "jovana@pdasp.rs", AmountOfMoneyOwned: 143.22},
+		{ID: "person1", FirstName: "Petar", LastName: "Trifunovic", EmailAddress: "petar@pdasp.rs", AmountOfMoneyOwned: 5400.54},
+		{ID: "person2", FirstName: "Marko", LastName: "Markovic", EmailAddress: "marko@pdasp.rs", AmountOfMoneyOwned: 8200.4},
+		{ID: "person3", FirstName: "Jovana", LastName: "Jovanovic", EmailAddress: "jovana@pdasp.rs", AmountOfMoneyOwned: 1430.22},
 	}
 
 	for _, carAsset := range carAssets {
