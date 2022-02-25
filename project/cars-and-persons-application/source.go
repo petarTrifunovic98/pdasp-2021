@@ -7,12 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"strconv"
 	"time"
@@ -23,17 +25,32 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-const (
-	mspID         = "Org1MSP"
-	cryptoPath    = "../test-network/organizations/peerOrganizations/org1.example.com"
-	certPath      = cryptoPath + "/users/User1@org1.example.com/msp/signcerts/cert.pem"
-	keyPath       = cryptoPath + "/users/User1@org1.example.com/msp/keystore/"
-	tlsCertPath   = cryptoPath + "/peers/peer0.org1.example.com/tls/ca.crt"
-	peerEndpoint  = "localhost:7051"
-	gatewayPeer   = "peer0.org1.example.com"
-	channelName   = "mychannel"
-	chaincodeName = "basic"
-)
+// const (
+// 	mspID         = "Org1MSP"
+// 	cryptoPath    = "../test-network/organizations/peerOrganizations/org1.example.com"
+// 	certPath      = cryptoPath + "/users/User1@org1.example.com/msp/signcerts/cert.pem"
+// 	keyPath       = cryptoPath + "/users/User1@org1.example.com/msp/keystore/"
+// 	tlsCertPath   = cryptoPath + "/peers/peer0.org1.example.com/tls/ca.crt"
+// 	peerEndpoint  = "localhost:7051"
+// 	gatewayPeer   = "peer0.org1.example.com"
+// 	channelName   = "mychannel"
+// 	chaincodeName = "basic"
+// )
+
+type AppConfig struct {
+	Orgs          map[string]OrgConfig `json:"orgs"`
+	ChannelName   string               `json:"channelName"`
+	ChaincodeName string               `json:"chaincodeName"`
+}
+
+type OrgConfig struct {
+	MspID        string `json:"mspID"`
+	CertPath     string `json:"certPath"`
+	KeyPath      string `json:"keyPath"`
+	TlsCertPath  string `json:"tlsCertPath"`
+	PeerEndpoint string `json:"peerEndpoint"`
+	GatewayPeer  string `json:"gatewayPeer"`
+}
 
 var now = time.Now()
 var assetId = fmt.Sprintf("asset%d", now.Unix()*1e3+int64(now.Nanosecond())/1e6)
@@ -41,12 +58,43 @@ var assetId = fmt.Sprintf("asset%d", now.Unix()*1e3+int64(now.Nanosecond())/1e6)
 func main() {
 	log.Println("============ application-golang starts ============")
 
+	configJSON, err := os.Open("app_config.json")
+	if err != nil {
+		panic(fmt.Errorf("could not open the config file"))
+	}
+	defer configJSON.Close()
+
+	byteConfig, _ := ioutil.ReadAll(configJSON)
+	var appConfig AppConfig
+	json.Unmarshal(byteConfig, &appConfig)
+	orgsConfig := appConfig.Orgs
+
+	var orgConfig OrgConfig
+
+	fmt.Println("Choose your organization by entering a number:")
+	fmt.Println("1 - org1\n2 - org2\n3 - org3")
+	fmt.Println("Anything else defaults to 1")
+	var orgOption int
+	fmt.Scanf("%d", &orgOption)
+
+	switch orgOption {
+	case 2:
+		orgConfig = orgsConfig["org2"]
+	case 3:
+		orgConfig = orgsConfig["org3"]
+	default:
+		orgConfig = orgsConfig["org1"]
+	}
+
+	channelName := appConfig.ChannelName
+	chaincodeName := appConfig.ChaincodeName
+
 	// The gRPC client connection should be shared by all Gateway connections to this endpoint
-	clientConnection := newGrpcConnection()
+	clientConnection := newGrpcConnection(orgConfig.TlsCertPath, orgConfig.GatewayPeer, orgConfig.PeerEndpoint)
 	defer clientConnection.Close()
 
-	id := newIdentity()
-	sign := newSign()
+	id := newIdentity(orgConfig.CertPath, orgConfig.MspID)
+	sign := newSign(orgConfig.KeyPath)
 
 	// Create a Gateway connection for a specific client identity
 	gateway, err := client.Connect(
@@ -66,9 +114,6 @@ func main() {
 
 	network := gateway.GetNetwork(channelName)
 	contract := network.GetContract(chaincodeName)
-
-	fmt.Println("Initializing ledger")
-	//initLedger(contract)
 
 	var option int
 
@@ -134,7 +179,7 @@ loop:
 			var acceptMalfunctionedStr string
 			fmt.Scanf("%s", &acceptMalfunctionedStr)
 			var acceptMalfunctionedBool bool
-			if acceptMalfunctionedStr == "no" {
+			if acceptMalfunctionedStr == "n" {
 				acceptMalfunctionedBool = false
 			} else {
 				acceptMalfunctionedBool = true
@@ -149,7 +194,10 @@ loop:
 
 			fmt.Println("Enter malfunction description:")
 			var description string
-			fmt.Scanf("%s", &description)
+			scanner := bufio.NewScanner(os.Stdin)
+			if scanner.Scan() {
+				description = scanner.Text()
+			}
 
 			fmt.Printf("Enter malfunction repair price: ")
 			var repairPrice float32
@@ -159,7 +207,7 @@ loop:
 		case 7:
 			fmt.Printf("Enter car ID: ")
 			var carID string
-			fmt.Scanf("%s", carID)
+			fmt.Scanf("%s", &carID)
 
 			fmt.Printf("Enter new car color: ")
 			var newColor string
@@ -169,7 +217,7 @@ loop:
 		case 8:
 			fmt.Printf("Enter car ID: ")
 			var carID string
-			fmt.Scanf("%s", carID)
+			fmt.Scanf("%s", &carID)
 			repairCar(contract, carID)
 
 		case 9:
@@ -187,7 +235,7 @@ loop:
 }
 
 // newGrpcConnection creates a gRPC connection to the Gateway server.
-func newGrpcConnection() *grpc.ClientConn {
+func newGrpcConnection(tlsCertPath string, gatewayPeer string, peerEndpoint string) *grpc.ClientConn {
 	certificate, err := loadCertificate(tlsCertPath)
 	if err != nil {
 		panic(err)
@@ -206,7 +254,7 @@ func newGrpcConnection() *grpc.ClientConn {
 }
 
 // newIdentity creates a client identity for this Gateway connection using an X.509 certificate.
-func newIdentity() *identity.X509Identity {
+func newIdentity(certPath string, mspID string) *identity.X509Identity {
 	certificate, err := loadCertificate(certPath)
 	if err != nil {
 		panic(err)
@@ -229,7 +277,7 @@ func loadCertificate(filename string) (*x509.Certificate, error) {
 }
 
 // newSign creates a function that generates a digital signature from a message digest using a private key.
-func newSign() identity.Sign {
+func newSign(keyPath string) identity.Sign {
 	files, err := ioutil.ReadDir(keyPath)
 	if err != nil {
 		panic(fmt.Errorf("failed to read private key directory: %w", err))
