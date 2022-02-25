@@ -211,9 +211,12 @@ Application: &ApplicationDefaults
         LifecycleEndorsement:
             Type: ImplicitMeta
             Rule: "MAJORITY Endorsement"
+        # Endorsement:
+        #     Type: ImplicitMeta
+        #     Rule: "MAJORITY Endorsement"
         Endorsement:
-            Type: ImplicitMeta
-            Rule: "MAJORITY Endorsement"
+            Type: Signature
+            Rule: "AND('Org1MSP.member', 'Org2MSP.member', 'Org3MSP.member')"
 
     Capabilities:
         <<: *ApplicationCapabilities
